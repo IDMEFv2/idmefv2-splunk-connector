@@ -1,0 +1,24 @@
+[app/ui]
+version = 9.4.0
+modtime = 1739880264.110638000
+
+[app/launcher]
+version = 9.4.0
+modtime = 1739880264.112596000
+
+[]
+access = read : [ * ], write : [ admin, power ]
+export = none
+version = 9.4.0
+modtime = 1739880225.707782000
+
+[app/package/check_for_updates]
+version = 9.4.0
+modtime = 1739880264.113202000
+
+[alert_actions/idmefv2-connector]
+access = read : [ * ], write : [ * ]
+export = system
+owner = nobody
+version = 9.4.0
+modtime = 1739885287.735512000
