@@ -13,8 +13,14 @@ Once the connector has been installed and the alert set up it is entirely normal
 
 # Installation and example setup
 1. Download the files from the repository.
-2. Access your Splunk files and enter into the **apps** folder inside this path: /opt/splunk/etc
-3. Create a new folder, named for example "IDMEFv2-Connector" and copy the content of the **IDMEFv2-Splunk** folder from the repository inside it.
+2. Run the package-app.sh script with a user that has administrative privileges.
+    - The script will automatically create a tar.gz package containing the application, placed in the path release/application_name.tar.gz.
+3. Start Splunk and click on Manage in the Apps section.
+    - On the new page, click the button in the top-right corner labeled Install App From File.
+    - On the next page that appears, upload the .tar.gz package you created in step 2.
+
+Your application has been installed.
+
 > The following steps (4 to 5 and 7 to 12) are optional. The connector works with any Splunk alert that uses the default Splunk event column. We are adding these steps as a guided example.
 4. *(optional)* Now enter into the **log** folder inside this path: /opt/splunk/var
 5. *(optional)* Create a file named **auth.log** and write the following text into it. This will be the example file Splunk will monitor.
