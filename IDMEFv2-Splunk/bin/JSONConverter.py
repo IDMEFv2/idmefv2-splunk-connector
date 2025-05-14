@@ -2,6 +2,7 @@
     Generic JSON to JSON converter
 '''
 import jsonpath_ng as jsonpath
+import logging
 
 class JSONConverter(object):
 
@@ -56,7 +57,11 @@ class JSONConverter(object):
     @staticmethod
     def __convert(template: any, src: dict) -> any:
         if isinstance(template, jsonpath.JSONPath):
-            return template.find(src)[0].value
+            matches = template.find(src)
+            if not matches:
+                logging.warning(f"[JSONConverter] JSONPath '{template}' not found in source. Source: {src}")
+                return None
+            return matches[0].value
         if isinstance(template, str):
             return template
         if JSONConverter.__is_call(template):

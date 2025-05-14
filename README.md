@@ -40,7 +40,7 @@ Your application has been installed.
     - *Name*: Extract Failed password
     - *Apply to*: sourcetype
     - *named*: linux_secure
-    - *Extraction/Transform*: Failed password for (?<user>\S+) from (?<ip>\d+\.\d+\.\d+\.\d+) port (?<port>\d+)  
+    - *Extraction/Transform*: Failed password for (?<user>\S+) from (?<ip>\d+\.\d+\.\d+\.\d+) port (?<port>\d+)
     
     Note that this step is optional because the connector will fill in the missing fields with default values.
 13. Go back to the **Home** page.
