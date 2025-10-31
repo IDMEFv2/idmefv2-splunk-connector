@@ -15,7 +15,7 @@ import requests
 import json
 import logging
 import logging.handlers
-from datetime import datetime, timezone
+from datetime import datetime
 from urllib.parse import urlparse
 
 # Inserts the "lib" directory in the path to find JSONConverter.py
@@ -42,13 +42,41 @@ except Exception as e:
     global_exception_hook(*sys.exc_info())
     sys.exit(1)
 
-def extract_ip_from_url(url):
-    parsed_url = urlparse(url)
-    return parsed_url.hostname if parsed_url.hostname else "unknown"
+# ---------- Helpers ----------
+
+def is_ip(s: str) -> bool:
+    if not s:
+        return False
+    parts = s.split(".")
+    if len(parts) != 4:
+        return False
+    try:
+        return all(0 <= int(p) <= 255 for p in parts)
+    except ValueError:
+        return False
+
+def extract_ip_from_url(url_or_ip):
+    """
+    Accepts either a plain IP (e.g. '10.0.0.1') or a URL (e.g. 'https://10.0.0.1:8000').
+    Returns the hostname/IP if present, otherwise '0.0.0.0'.
+    """
+    if not url_or_ip:
+        return "0.0.0.0"
+    s = str(url_or_ip).strip()
+    if is_ip(s):
+        return s
+    try:
+        parsed_url = urlparse(s if "://" in s else f"//{s}", allow_fragments=False)
+        host = parsed_url.hostname
+        return host if host else "0.0.0.0"
+    except Exception:
+        return "0.0.0.0"
 
 def get_current_datetime():
-    current_datetime = datetime.utcnow()
-    return current_datetime.strftime("%Y-%m-%dT%H:%M:%S.") + str(current_datetime.microsecond).zfill(6) + "Z"
+    """
+    ISO-8601 with local timezone offset, second precision (e.g. '2025-09-01T12:20:00+02:00').
+    """
+    return datetime.now().astimezone().isoformat(timespec="seconds")
 
 def send_to_idmefv2_endpoint(message, idmefv2_endpoint):
     headers = {"Content-Type": "application/json"}
@@ -81,9 +109,9 @@ logger = setup_logger(logging.INFO)
 
 def classify_event(alert_data):
     """
-    Determins the IDMEF classification based on the event's message.
+    Determines the IDMEF classification based on the event's message.
     If alert_data is a dictionary, it utilizes the _raw field; if it is a string instead, it uses it directly.
-    Returns the category in string format, for example "Attempt.Login" for failed logins.
+    Returns the category in string format, e.g., "Attempt.Login" for failed logins.
     """
     if isinstance(alert_data, dict):
         event_message = alert_data.get("_raw", "").lower()
@@ -107,15 +135,14 @@ def classify_event(alert_data):
 
 def extract_service(alert_data):
     """
-    Estracts the name of the service form the the _raw field.
-    If alert_data is a dictionary, it utilizes the _raw field; if it is a string instead, it uses it directly.
+    Extracts the service name from _raw.
     Returns "SSH" when it finds "sshd", "HTTP" when it finds "httpd", "Unknown" otherwise.
     """
     if isinstance(alert_data, dict):
         event_message = alert_data.get("_raw", "").lower()
     else:
         event_message = str(alert_data).lower()
-        
+
     if "sshd" in event_message:
         return "SSH"
     elif "httpd" in event_message:
@@ -124,50 +151,85 @@ def extract_service(alert_data):
 
 def normalize_datetime(date_str):
     """
-    Convert datetime string to ISO 8601 format with 'Z' (UTC) timezone.
-    Accepts formats like 'YYYY-MM-DD HH:MM:SS' and returns 'YYYY-MM-DDTHH:MM:SSZ'.
+    Convert a 'YYYY-MM-DD HH:MM:SS' string into ISO-8601 with local timezone offset.
+    Example: '2025-05-19 12:15:42' -> '2025-05-19T12:15:42+02:00'
     """
     if not date_str:
         logger.warning("Empty or null date string provided.")
-        return date_str
+        return None
 
     try:
         dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-        dt_utc = dt.replace(tzinfo=timezone.utc)
-        return dt_utc.isoformat().replace("+00:00", "Z")
+        # assume the naive datetime is in local time
+        tz = datetime.now().astimezone().tzinfo
+        dt = dt.replace(tzinfo=tz)
+        return dt.isoformat(timespec="seconds")
     except ValueError:
         logger.warning("Unrecognized datetime format: '%s'. Expected 'YYYY-MM-DD HH:MM:SS'.", date_str)
     except Exception as e:
         logger.warning("Failed to normalize datetime '%s': %s", date_str, e)
-    
-    return date_str
 
-def remove_none_fields(obj):
+    return None
+
+def to_int_list(x):
+    """
+    Try to parse a single value as an int and return [int].
+    If not possible (e.g., '-', '', None), return [] so we can drop it in prune.
+    """
+    try:
+        s = str(x).strip()
+        v = int(s)
+        return [v]
+    except Exception:
+        return []
+
+def prune(obj):
+    """
+    Remove None, empty strings, empty lists and empty dicts recursively.
+    """
     if isinstance(obj, dict):
-        return {k: remove_none_fields(v) for k, v in obj.items() if v is not None}
-    elif isinstance(obj, list):
-        return [remove_none_fields(i) for i in obj if i is not None]
-    else:
-        return obj
+        pruned = {}
+        for k, v in obj.items():
+            pv = prune(v)
+            if pv is None:
+                continue
+            if pv == "":
+                continue
+            if pv == []:
+                continue
+            if pv == {}:
+                continue
+            pruned[k] = pv
+        return pruned
+    if isinstance(obj, list):
+        pruned_list = []
+        for item in obj:
+            pi = prune(item)
+            if pi is None or pi == "" or pi == [] or pi == {}:
+                continue
+            pruned_list.append(pi)
+        return pruned_list
+    return obj
 
-# Updated template: the JSONPath are relative to the unified object we pass to the converter.
+# ---------- Template ----------
+# The JSONPath are relative to the unified object passed to the converter.
 template = {
-    "Version": "2.D.V04",
-    "ID": "$.sid",
+    "Version": "2.D.V05",
+    "ID": "$.id",
     "OrganisationName": "ElmiSoftware",
-    "OrganizationId": "de0fdb525074492eabbf51d1842e43b8",
+    "OrganisationId": "de0fdb525074492eabbf51d1842e43b8",
     "Description": "$.description",
-    "Priority": (lambda urgency: str(urgency).capitalize() if urgency else "Medium", "$.urgency"),
+    "Priority": (lambda priority: str(priority).capitalize() if priority else "Medium", "$.priority"),
     "CreateTime": lambda: get_current_datetime(),
     "StartTime": "$.StartTime",
-    "Category": (lambda data: [classify_event(data)] if data else ["Unclassified"], "$._raw"),
+    "Category": (lambda data: [classify_event(data)] if data else ["Attempt.Login"], "$._raw"),
     "Analyzer": {
-        "Name": "$.dvc_name",
-        "Hostname": "$.dvc_host",
-        "Type": "$.category",
-        "Model": "Splunk Enterprise",
+        "Name": ( lambda t: t if t else "SPLUNK", "$.dvc_name" ),
+        "Hostname": ( lambda t: t if t else "splunk.host", "$.dvc_host" ),
+        "Type": ["$.type"],
+        "Model": "$.vendor_product",
         "Category": ["SIEM"],
-        "IP": (lambda url: extract_ip_from_url(url) if url else "0.0.0.0", "$.server_uri")
+        "IP": (lambda x: extract_ip_from_url(x) if x else "0.0.0.0", "$.dvc_ip")
     },
     "Source": [{
         "IP": "$.src_ip",
@@ -175,18 +237,24 @@ template = {
         "User": "$.src_user",
         "Email": "$.src_user",
         "Protocol": "$.protocol",
-        "Port": "$.src_port",
-        "Unlocation": "$.src_country",
+        "Port": (lambda p: (lambda L: L if L else None)(to_int_list(p)), "$.src_port"),
+        "UnLocation": "$.src_country"
     }],
     "Target": [{
+        "IP": "$.dest_ip",
+        "Hostname": "$.dest_host",
         "Service": (
             lambda *args: next((v for v in args if v), "unknown_service"),
             "$.service", "$.process", "$.process_name"
         ),
-        "Port": "$.dest_port",
-        "Unlocation": "$.dest_country"
+        "User": "$.dest_user",
+        "Email": "$.dest_user",
+        "Port": (lambda p: (lambda L: L if L else None)(to_int_list(p)), "$.dest_port"),
+        "UnLocation": "$.dest_country"
     }]
 }
+
+# ---------- Main ----------
 
 def main():
     """
@@ -203,53 +271,42 @@ def main():
         if len(sys.argv) > 1 and sys.argv[1] == "--execute":
             payload = json.loads(sys.stdin.read())
             logger.info("Received payload: %s", json.dumps(payload, indent=4))
-            
+
             config = payload.get("configuration", {})
             idmefv2_endpoint = config.get("idmefv2_endpoint", "http://default-endpoint")
             logger.info("Using generic Splunk template with dynamic classification.")
-            
+
             result_data = payload.get("result", {})
             logger.info("Received result: %s", json.dumps(result_data, indent=4))
-            
-            # Set defaults
+
+            # Ensure mandatory fields / defaults
+            generated_id = str(uuid.uuid4())
+            result_data["id"] = generated_id
+
+            # Dynamic helpers
             result_data["_raw"] = result_data.get("_raw", "")
             result_data["idmef_category"] = classify_event(result_data)
-            
+
             try:
                 result_data["target_service"] = extract_service(result_data)
             except Exception as e:
                 logger.warning("Unable to extract target service: %s. Defaulting to 'Unknown'.", e)
                 result_data["target_service"] = "Unknown"
-            
+
             # Merge configuration and other top-level payload fields
             result_data["configuration"] = config
             for key, value in payload.items():
                 if key != "result":
                     result_data[key] = value
-            
-            # Set required default fields if missing
-            required_fields = {
-                "sid": "unknown",
-                "server_uri": "unknown",
-                "ip": "0.0.0.0",
-                "user": "unknown",
-                "host": "unknown",
-                "port": 0
-            }
-            for field, default in required_fields.items():
-                if field not in result_data or not result_data[field]:
-                    logger.warning("Missing field '%s', defaulting to '%s'", field, default)
-                    result_data[field] = default
 
             # Normalize datetime fields
-            if "start_time" in result_data:
-                normalized = normalize_datetime(result_data["start_time"])
-                result_data["StartTime"] = normalized
-                logger.info("Normalized 'start_time' to 'StartTime': %s", normalized)
-            result_data["CreateTime"] = get_current_datetime()
+            normalized_start = None
+            if "start_time" in result_data and result_data["start_time"]:
+                normalized_start = normalize_datetime(result_data["start_time"])
+            result_data["StartTime"] = normalized_start
 
             logger.info("Final result_data before conversion: %s", json.dumps(result_data, indent=4))
-            
+
             # Convert to IDMEFv2
             try:
                 converter = JSONConverter(template)
@@ -257,15 +314,15 @@ def main():
             except Exception as conv_err:
                 logger.error("Conversion error: %s", conv_err, exc_info=True)
                 raise
-            
+
             if not converted:
                 raise Exception("IDMEF conversion failed.")
 
-            # Clean null fields
-            idmef_message = remove_none_fields(idmef_message)
+            # Remove null/empty fields
+            idmef_message = prune(idmef_message)
 
             logger.info("Generated IDMEF message: %s", json.dumps(idmef_message, indent=4))
-            
+
             # Send
             result = send_to_idmefv2_endpoint(idmef_message, idmefv2_endpoint)
             if result == 200:

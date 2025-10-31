@@ -25,18 +25,21 @@ Your application has been installed.
 5. Create a file named **auth.json** and write the following json into it. This will be the example file Splunk will monitor.
     ```
     {
-     "src_ip": "10.219.15.14",
-     "message": "In a 5-second period, between 2025-05-12 11:15:11 and 2025-05-12 11:15:16, for user 4bf69 from the Workstation DC, a constant and high number of events were generated: An account failed to log on, event code 4625. The 52 logins failed due to incorrect username or password (status 0xC000006D), (sub_status 0xC000006A). The same anomalous behavior repeated once more in the 4-hour period under examination.",
-     "urgency": "medium",
-     "duration": "5.000000",
-     "dvc_name": "SPLUNK01",
-     "src_host": "DC",
-     "src_port": "2396",
-     "src_user": "4bf69",
-     "start_time": "2025-05-12 11:15:11",
-     "unlocation": "IT ROM",
-     "description": "User logon with misspelled or bad password",
-     "vendor_product": "9.4.1"
+        "Category":"Attempt.Login",
+        "type":"Cyber",
+        "src_ip":"192.168.92.240", 
+        "dvc_host":"auth.splunk.com", 
+        "dvc_name":"SPLUNK",
+        "priority":"medium", 
+        "src_host":"DC", 
+        "src_port":"-",
+        "dest_host":"target_host", 
+        "dest_name":"51188", 
+        "start_time":"2025-05-19 12:15:42", 
+        "unlocation":"IT ROM",
+        "description":"User logon with misspelled or bad password", 
+        "dvc_category":"SIEM", 
+        "vendor_product":"9.4.2"
     }
     ```
 6. Restart Splunk and access your account.
@@ -49,7 +52,7 @@ Your application has been installed.
 12. Go back to the **Home** page.
 13. Find the **Search & Reporting** section under **Apps** and click on it.
 14. Now search something using the bar, here's an example:
-    - Write the following into the searchbar: "src_ip" = "10.219.15.14"
+    - Write the following into the searchbar: "src_ip" = "192.168.92.240"
     - Set the time to **All time**
     - Start the research
 15. Click on the **Save as** button located above the searchbar on the right, then select **Alert**.
