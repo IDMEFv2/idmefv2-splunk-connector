@@ -1,0 +1,8 @@
+source_value,idmefv2_category
+Attempt.Login,Access.Unauthorized
+Information.LoginSuccess,Access.Authorized
+Information.UnauthorizedAccess,Access.Unauthorized
+Intrusion.AdminCompromise,Access.Escalation
+BruteForce-SSH,Access.Forced
+Recon.Scanning,Recon.Network
+Malicious.System,Malware.Other

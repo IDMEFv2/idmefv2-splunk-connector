@@ -6,4 +6,60 @@
             <span class="help-block">IDMEFv2 endpoint to send the message to.</span>
         </div>
     </div>
+    <div class="control-group">
+        <label class="control-label" for="auth_type">Auth Type</label>
+        <div class="controls">
+            <select name="action.idmefv2-connector.param.auth_type" id="auth_type">
+                <option value="none">None</option>
+                <option value="bearer">Bearer token</option>
+                <option value="basic">Basic username/password</option>
+            </select>
+            <span class="help-block">Authentication mode for the endpoint. Default: none.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="auth_token">Bearer Auth Token</label>
+        <div class="controls">
+            <input type="password" name="action.idmefv2-connector.param.auth_token" id="auth_token" />
+            <span class="help-block">Used only when Auth Type is Bearer token. Leave empty otherwise.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="auth_username">Basic Auth Username</label>
+        <div class="controls">
+            <input type="text" name="action.idmefv2-connector.param.auth_username" id="auth_username" />
+            <span class="help-block">Used only when Auth Type is Basic username/password.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="auth_password">Basic Auth Password</label>
+        <div class="controls">
+            <input type="password" name="action.idmefv2-connector.param.auth_password" id="auth_password" />
+            <span class="help-block">Used only when Auth Type is Basic username/password.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="verify_ssl">Verify SSL</label>
+        <div class="controls">
+            <select name="action.idmefv2-connector.param.verify_ssl" id="verify_ssl">
+                <option value="1">1 - Verify SSL certificates</option>
+                <option value="0">0 - Do not verify SSL certificates</option>
+            </select>
+            <span class="help-block">Set to 0 only for lab environments or self-signed certificates. Default: 1.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="organisation_name">Organisation Name</label>
+        <div class="controls">
+            <input type="text" name="action.idmefv2-connector.param.organisation_name" id="organisation_name" />
+            <span class="help-block">IDMEFv2 OrganisationName. Defaults to "CHANGE-ME" if left empty — set your actual organisation name.</span>
+        </div>
+    </div>
+    <div class="control-group">
+        <label class="control-label" for="organisation_id">Organisation ID</label>
+        <div class="controls">
+            <input type="text" name="action.idmefv2-connector.param.organisation_id" id="organisation_id" />
+            <span class="help-block">IDMEFv2 OrganisationId. Defaults to "CHANGE-ME" if left empty — set your actual organisation identifier.</span>
+        </div>
+    </div>
 </form>

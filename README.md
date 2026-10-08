@@ -2,7 +2,9 @@
 A Splunk SIEM to IDMEFv2 connector
 
 # Main purpose
-This connector is designed to convert alerts coming from splunk into the IDMEFv2 format.  
+This connector is designed to convert alerts coming from splunk into IDMEFv2 **2.D.V08** format.
+
+This is the base/generic connector for standard Splunk deployments (any search result, not tied to Splunk Enterprise Security). For Splunk ES lifecycle-aware alerting (notable events, `PredID` chaining, `Status`), see the separate `IDMEFv2-SplunkES-Plugin` project.
 
 # Important 
 Once the connector has been installed and the alert set up it is entirely normal for it to not begin loging incidents right away. Splunk alerts can take a few minutes to start but will work as scheduled after the first send, until they are disabled.  
@@ -63,10 +65,32 @@ Your application has been installed.
     - *Time Range*: **All time**
     - *Cron Expression*: */1 * * * * (This means every minute, you can change it to whatever interval you prefer)
     - *Trigger Actions*: Add two actions
-        - **Add to Triggered Alerts** (Select whatever severity you want to see on splunk, this does not affect the connector. It is added to allow you to see when your alert is triggered)
-        - **Send Alert in IDMEFv2 format** (Insert your IDMFEFv2 server endpoint)
+        - **Add to Triggered Alerts** (Select whatever severity you want to see on splunk, this does not affect the connector. It is added to allow you to see when your alert is triggered — without it, Splunk's "Triggered Alerts" page will stay empty even if the connector is sending successfully)
+        - **Send Alert in IDMEFv2 format** — configure at least the **Endpoint**. See [Alert action parameters](#alert-action-parameters) below for the rest (authentication, organisation info).
 17. Save your alert.
-18. Your alert is now in effect. If you've followed our examples Splunk will send a new alert to your IDMFEFv2 server every minute until you decide to disable the alert.
+18. Your alert is now in effect. If you've followed our examples Splunk will send a new alert to your IDMEFv2 server every minute until you decide to disable the alert.
+
+# Alert action parameters
+
+| Parameter | Default | Description |
+|---|---:|---|
+| Endpoint | *(required)* | IDMEFv2 endpoint the generated alert is sent to. |
+| Auth Type | `none` | `none`, `bearer` (token), or `basic` (username/password). |
+| Bearer Auth Token | empty | Used only when Auth Type is Bearer token. |
+| Basic Auth Username / Password | empty | Used only when Auth Type is Basic username/password. |
+| Verify SSL | `1` | Verifies the endpoint's TLS certificate. Disable (`0`) only for lab environments or self-signed certificates. |
+| Organisation Name | `CHANGE-ME` | IDMEFv2 `OrganisationName` — set this to your actual organisation name. Some receivers may override this server-side based on the authenticated sender's identity, regardless of what's sent here — check with your receiver if the value doesn't appear to stick. |
+| Organisation ID | `CHANGE-ME` | IDMEFv2 `OrganisationId` — set this to your actual organisation identifier. |
+
+# Category mapping
+
+The `Category` field is resolved in this order:
+1. An explicit category already present in the triggering event (e.g. a `Category` field set by the search itself), when it's already a valid IDMEFv2 V08 category.
+2. The same explicit value translated through `IDMEFv2-Splunk/lookups/idmefv2_category_mapping.csv` — an editable lookup for mapping legacy/custom category strings to valid V08 categories, without touching code.
+3. A keyword match on the raw event text, as a last-resort fallback.
+4. `Other.Undetermined` if nothing above matched.
+
+`Cause` is derived automatically from the resolved `Category`.
 
 # To disable your custom alert
 1. From the **Home** page click on the **Search & Reporting** section under **Apps**

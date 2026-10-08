@@ -1,0 +1,14 @@
+idmefv2_category_mapping.csv
+
+Tier-2 category mapping used by bin/idmefv2-connector.py: translates an
+explicit "Category"/"category" value coming from the triggering alert/search
+into a valid IDMEFv2 V08 category, when that value isn't already one.
+
+Columns:
+  source_value      - the raw category/search-name value to match (case-insensitive)
+  idmefv2_category  - the IDMEFv2 V08 category to emit; rows with a value not in
+                      the V08 categoryEnum are ignored
+
+Administrators can add rows for additional legacy or custom category values
+without changing the connector's code. If no row matches, the connector falls
+back to keyword matching on the raw event text, then to "Other.Undetermined".

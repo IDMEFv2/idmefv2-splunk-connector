@@ -1,3 +1,5 @@
 *.Identifier
 venv
 releases
+__pycache__/
+*.pyc
